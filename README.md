@@ -4,11 +4,20 @@ It collects product URLs, scrapes detailed product data using Playwright, proces
 
 The system is designed for scalability and efficiency, combining asynchronous scraping, intelligent data extraction, and real-time automation into a single interface.
 
+!!!!---------------------------------------------------------------------!!!!
+
 🔗 Automated product URL collection from category pages
+
 🧠 AI-powered data extraction (Google Gemini integration)
+
 📦 Real-time stock detection by size/variant
+
 📊 Excel-based data processing and export
+
 🤖 Fully automated Trendyol stock & price synchronization
+
 🖥️ User-friendly desktop GUI (CustomTkinter)
+
 ⚡ Async + multithreading for high performance
+
 🔐 Secure API key management via .env
