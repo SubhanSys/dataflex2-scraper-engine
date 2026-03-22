@@ -86,11 +86,13 @@ class App(ctk.CTk):
 
     # --- SEKME 1: VERİ AKTARICI ---
     def setup_veri_aktarici_tab(self):
-        ctk.CTkLabel(self.tab_aktarici, text="1. Linklerin Bulunduğu Dosya (.txt)").pack(pady=(20, 5), anchor="w",
-                                                                                         padx=20)
-        self.entry_txt_aktarici = ctk.CTkEntry(self.tab_aktarici, width=300,
-                                               placeholder_text="Varsayılan: urun_linkleri.txt")
-        self.entry_txt_aktarici.pack(pady=0, padx=20, anchor="w")
+        ctk.CTkLabel(self.tab_aktarici, text="1. Linklerin Bulunduğu Dosya (.txt)").pack(pady=(20, 5), anchor="w", padx=20)
+        txt_frame = ctk.CTkFrame(self.tab_aktarici, fg_color="transparent")
+        txt_frame.pack(fill="x", padx=20)
+        self.entry_txt_aktarici = ctk.CTkEntry(txt_frame, width=220, placeholder_text="Varsayılan: urun_linkleri.txt")
+        self.entry_txt_aktarici.pack(side="left")
+        ctk.CTkButton(txt_frame, text="Dosya Seç", width=70,
+                      command=lambda: self.sec_dosya(self.entry_txt_aktarici, "*.txt")).pack(side="left", padx=10)
 
         ctk.CTkLabel(self.tab_aktarici, text="2. Kaydedilecek Excel Dosyası (.xlsx) [ZORUNLU]").pack(pady=(20, 5),
                                                                                                      anchor="w",
@@ -116,26 +118,37 @@ class App(ctk.CTk):
         self.btn_durdur_aktarici.pack(side="left", padx=10)
 
     # --- SEKME 2: URL KAYDEDİCİ ---
+    # --- SEKME 2: URL KAYDEDİCİ ---
     def setup_url_kaydedici_tab(self):
+
+        # 1. Kategori URL (Resimde kaybolan kısım geri geldi)
         ctk.CTkLabel(self.tab_kaydedici, text="1. Kategori URL [ZORUNLU]").pack(pady=(20, 5), anchor="w", padx=20)
         self.entry_kategori_url = ctk.CTkEntry(self.tab_kaydedici, width=350)
         self.entry_kategori_url.pack(pady=0, padx=20, anchor="w")
 
+        # 2. Çekilecek Ürün Sayısı
         ctk.CTkLabel(self.tab_kaydedici, text="2. Çekilecek Ürün Sayısı [ZORUNLU]").pack(pady=(20, 5), anchor="w",
                                                                                          padx=20)
         self.entry_urun_sayisi = ctk.CTkEntry(self.tab_kaydedici, width=150)
         self.entry_urun_sayisi.pack(pady=0, padx=20, anchor="w")
 
+        # 3. Kaydedilecek Dosya İsmi (Opsiyonel) + DOSYA SEÇ BUTONU EKLENDİ
         ctk.CTkLabel(self.tab_kaydedici, text="3. Kaydedilecek Dosya İsmi (.txt) [Opsiyonel]").pack(pady=(20, 5),
                                                                                                     anchor="w", padx=20)
-        self.entry_txt_kaydedici = ctk.CTkEntry(self.tab_kaydedici, width=300,
-                                                placeholder_text="Varsayılan: urun_linkleri.txt")
-        self.entry_txt_kaydedici.pack(pady=0, padx=20, anchor="w")
+        txt_kayit_frame = ctk.CTkFrame(self.tab_kaydedici, fg_color="transparent")
+        txt_kayit_frame.pack(fill="x", padx=20)
 
+        self.entry_txt_kaydedici = ctk.CTkEntry(txt_kayit_frame, width=220,
+                                                placeholder_text="Varsayılan: urun_linkleri.txt")
+        self.entry_txt_kaydedici.pack(side="left")
+
+        ctk.CTkButton(txt_kayit_frame, text="Dosya Seç", width=70,
+                      command=lambda: self.sec_dosya(self.entry_txt_kaydedici, "*.txt")).pack(side="left", padx=10)
+
+        # Başlat Butonu
         self.btn_baslat_kaydedici = ctk.CTkButton(self.tab_kaydedici, text="🔗 URL TOPLAMAYI BAŞLAT", height=40,
                                                   font=ctk.CTkFont(weight="bold"), command=self.run_url_kaydedici)
         self.btn_baslat_kaydedici.pack(pady=50)
-
     # --- SEKME 3: STOK KONTROL ---
     def setup_stok_kontrol_tab(self):
         ctk.CTkLabel(self.tab_stok, text="1. Kontrol Edilecek (Kaynak) Excel [ZORUNLU]").pack(pady=(20, 5), anchor="w",
