@@ -6,6 +6,7 @@ import tkinter.messagebox as messagebox
 import threading
 import asyncio
 import multiprocessing
+import json  # <--- YENİ EKLENDİ
 
 # Kendi yazdığımız scriptleri import ediyoruz
 import urlFinder
@@ -13,15 +14,6 @@ import veriKaydedici
 import stokKontrol
 import otoStokKontrol
 
-# YENİ EKLENEN KISIM ----------
-from dotenv import load_dotenv
-
-# .env dosyasındaki şifreleri programa yükler
-load_dotenv('default_pass.env')
-
-TRENDYOL_SATICI_ID = os.getenv("TRENDYOL_SATIC_ID")
-TRENDYOL_API_KEY = os.getenv("TRENDYOL_API_KEY")
-TRENDYOL_API_SECRET = os.getenv("TRENDYOL_API_SECRET")
 
 class ConsoleRedirector:
     def __init__(self, text_widget):
@@ -84,6 +76,17 @@ class App(ctk.CTk):
         sys.stdout = ConsoleRedirector(self.log_textbox)
         sys.stderr = ConsoleRedirector(self.log_textbox)
 
+        # Program kapatıldığında çalışacak fonksiyon
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+        # 🔥 ÇÖZÜM: Arayüzün tam çizilmesi için 0.2 saniye bekleyip ayarları öyle yüklüyoruz
+        self.after(200, self.load_settings)
+
+        ctk.CTkLabel(self.tab_aktarici, text="1. Google Gemini API Anahtarı [ZORUNLU]").pack(pady=(20, 5), anchor="w", padx=20)
+        self.entry_gemini_api = ctk.CTkEntry(self.tab_aktarici, width=350, placeholder_text="AIzaSy...", show="*")
+        self.entry_gemini_api.pack(pady=0, padx=20, anchor="w")
+
+
     # --- SEKME 1: VERİ AKTARICI ---
     def setup_veri_aktarici_tab(self):
         ctk.CTkLabel(self.tab_aktarici, text="1. Linklerin Bulunduğu Dosya (.txt)").pack(pady=(20, 5), anchor="w", padx=20)
@@ -116,8 +119,6 @@ class App(ctk.CTk):
                                                  height=40, font=ctk.CTkFont(weight="bold"),
                                                  command=self.stop_veri_aktarici)
         self.btn_durdur_aktarici.pack(side="left", padx=10)
-
-    # --- SEKME 2: URL KAYDEDİCİ ---
     # --- SEKME 2: URL KAYDEDİCİ ---
     def setup_url_kaydedici_tab(self):
 
@@ -194,15 +195,12 @@ class App(ctk.CTk):
         api_frame.pack(fill="x", padx=20)
 
         self.entry_api_id = ctk.CTkEntry(api_frame, width=80, placeholder_text="Satıcı ID", show="*")
-        self.entry_api_id.insert(0, TRENDYOL_SATICI_ID)
         self.entry_api_id.pack(side="left", padx=(0, 5))
 
         self.entry_api_key = ctk.CTkEntry(api_frame, width=150, placeholder_text="API Key", show="*")
-        self.entry_api_key.insert(0, TRENDYOL_API_KEY)
         self.entry_api_key.pack(side="left", padx=(0, 5))
 
         self.entry_api_secret = ctk.CTkEntry(api_frame, width=150, placeholder_text="API Secret", show="*")
-        self.entry_api_secret.insert(0, TRENDYOL_API_SECRET)
         self.entry_api_secret.pack(side="left")
 
         ctk.CTkLabel(self.tab_oto, text="3. Tur Bekleme Süresi (Dakika)").pack(pady=(15, 5), anchor="w", padx=20)
@@ -231,8 +229,14 @@ class App(ctk.CTk):
 
     # --- İŞLEMLER ---
     def run_veri_aktarici(self):
+        gemini_api = self.entry_gemini_api.get().strip()  # <-- YENİ
         excel_dosyasi = self.entry_excel.get().strip()
         txt_dosyasi = self.entry_txt_aktarici.get().strip() or "urun_linkleri.txt"
+
+        if not gemini_api:  # <-- YENİ
+            messagebox.showerror("Hata", "Lütfen Gemini API Anahtarınızı girin!")
+            return
+
         if not excel_dosyasi:
             messagebox.showerror("Hata", "Lütfen bir Excel dosyası seçin!")
             return
@@ -243,7 +247,8 @@ class App(ctk.CTk):
 
         def worker():
             try:
-                asyncio.run(veriKaydedici.baslat(txt_dosyasi, excel_dosyasi))
+                # 🔥 YENİ: gemini_api parametresini gönderiyoruz
+                asyncio.run(veriKaydedici.baslat(txt_dosyasi, excel_dosyasi, gemini_api))
             except Exception as e:
                 import traceback
                 print(f"\n❌ SİSTEM HATASI ÇIKTI:\n{traceback.format_exc()}")
@@ -252,7 +257,6 @@ class App(ctk.CTk):
                 self.btn_durdur_aktarici.configure(state="disabled", fg_color="gray")
 
         threading.Thread(target=worker, daemon=True).start()
-
 
     def run_url_kaydedici(self):
         kategori_url = self.entry_kategori_url.get().strip()
@@ -340,6 +344,95 @@ class App(ctk.CTk):
         print("\n⏳ Durdurma sinyali gönderildi, mevcut ürün bittikten sonra duracak...")
         self.btn_durdur_aktarici.configure(state="disabled", text="Durduruluyor...")
         veriKaydedici.veri_aktariciyi_durdur()
+
+    # 🔥 YENİ: Hata engelleyici (Kurşungeçirmez) Kaydetme Sistemi
+    def save_settings(self):
+        ayarlar = {}
+        # Her bir kutuyu "Eğer böyle bir kutu varsa kaydet" diyerek güvenli alıyoruz
+        if hasattr(self, 'entry_gemini_api'): ayarlar["gemini_api"] = self.entry_gemini_api.get()
+        if hasattr(self, 'entry_txt_aktarici'): ayarlar["aktarici_txt"] = self.entry_txt_aktarici.get()
+        if hasattr(self, 'entry_excel'): ayarlar["aktarici_excel"] = self.entry_excel.get()
+        if hasattr(self, 'entry_kategori_url'): ayarlar["kaydedici_url"] = self.entry_kategori_url.get()
+        if hasattr(self, 'entry_urun_sayisi'): ayarlar["kaydedici_sayi"] = self.entry_urun_sayisi.get()
+        if hasattr(self, 'entry_txt_kaydedici'): ayarlar["kaydedici_txt"] = self.entry_txt_kaydedici.get()
+        if hasattr(self, 'entry_stok_girdi'): ayarlar["stok_girdi"] = self.entry_stok_girdi.get()
+        if hasattr(self, 'entry_stok_cikti'): ayarlar["stok_cikti"] = self.entry_stok_cikti.get()
+        if hasattr(self, 'entry_oto_excel'): ayarlar["oto_excel"] = self.entry_oto_excel.get()
+        if hasattr(self, 'entry_api_id'): ayarlar["oto_id"] = self.entry_api_id.get()
+        if hasattr(self, 'entry_api_key'): ayarlar["oto_key"] = self.entry_api_key.get()
+        if hasattr(self, 'entry_api_secret'): ayarlar["oto_secret"] = self.entry_api_secret.get()
+        if hasattr(self, 'entry_bekleme'): ayarlar["oto_bekleme"] = self.entry_bekleme.get()
+
+        try:
+            with open("settings.json", "w", encoding="utf-8") as f:
+                json.dump(ayarlar, f, indent=4)
+        except Exception as e:
+            print(f"Ayarlar kaydedilemedi: {e}")
+
+    # 🔥 YENİ: Bir kutuda hata çıksa bile diğerlerini dolduran Yükleme Sistemi
+    # YENİ VE BASİTLEŞTİRİLMİŞ YÜKLEME SİSTEMİ
+    def load_settings(self):
+        if not os.path.exists("settings.json"):
+            return
+
+        try:
+            with open("settings.json", "r", encoding="utf-8") as f:
+                ayarlar = json.load(f)
+
+            kutular = {
+                "entry_gemini_api": "gemini_api",
+                "entry_txt_aktarici": "aktarici_txt",
+                "entry_excel": "aktarici_excel",
+                "entry_kategori_url": "kaydedici_url",
+                "entry_urun_sayisi": "kaydedici_sayi",
+                "entry_txt_kaydedici": "kaydedici_txt",
+                "entry_stok_girdi": "stok_girdi",
+                "entry_stok_cikti": "stok_cikti",
+                "entry_oto_excel": "oto_excel",
+                "entry_api_id": "oto_id",
+                "entry_api_key": "oto_key",
+                "entry_api_secret": "oto_secret",
+                "entry_bekleme": "oto_bekleme"
+            }
+
+            for widget_adi, json_anahtari in kutular.items():
+                if hasattr(self, widget_adi):  # Eğer kutu ekranda yaratılmışsa
+                    widget = getattr(self, widget_adi)
+                    deger = ayarlar.get(json_anahtari, "")
+                    if deger:  # Eğer JSON içinde bir yazı varsa
+                        widget.delete(0, "end")
+                        widget.insert(0, str(deger))
+
+            print("✅ Kaydedilmiş ayarlar başarıyla yüklendi!")
+
+        except Exception as e:
+            print(f"⚠️ Ayar yükleme hatası: {e}")
+
+    def save_settings(self):
+        ayarlar = {}
+        if hasattr(self, 'entry_gemini_api'): ayarlar["gemini_api"] = self.entry_gemini_api.get()
+        if hasattr(self, 'entry_txt_aktarici'): ayarlar["aktarici_txt"] = self.entry_txt_aktarici.get()
+        if hasattr(self, 'entry_excel'): ayarlar["aktarici_excel"] = self.entry_excel.get()
+        if hasattr(self, 'entry_kategori_url'): ayarlar["kaydedici_url"] = self.entry_kategori_url.get()
+        if hasattr(self, 'entry_urun_sayisi'): ayarlar["kaydedici_sayi"] = self.entry_urun_sayisi.get()
+        if hasattr(self, 'entry_txt_kaydedici'): ayarlar["kaydedici_txt"] = self.entry_txt_kaydedici.get()
+        if hasattr(self, 'entry_stok_girdi'): ayarlar["stok_girdi"] = self.entry_stok_girdi.get()
+        if hasattr(self, 'entry_stok_cikti'): ayarlar["stok_cikti"] = self.entry_stok_cikti.get()
+        if hasattr(self, 'entry_oto_excel'): ayarlar["oto_excel"] = self.entry_oto_excel.get()
+        if hasattr(self, 'entry_api_id'): ayarlar["oto_id"] = self.entry_api_id.get()
+        if hasattr(self, 'entry_api_key'): ayarlar["oto_key"] = self.entry_api_key.get()
+        if hasattr(self, 'entry_api_secret'): ayarlar["oto_secret"] = self.entry_api_secret.get()
+        if hasattr(self, 'entry_bekleme'): ayarlar["oto_bekleme"] = self.entry_bekleme.get()
+
+        try:
+            with open("settings.json", "w", encoding="utf-8") as f:
+                json.dump(ayarlar, f, indent=4)
+        except Exception as e:
+            print(f"Ayarlar kaydedilemedi: {e}")
+
+    def on_closing(self):
+        self.save_settings()
+        self.destroy()
 
 
 if __name__ == "__main__":

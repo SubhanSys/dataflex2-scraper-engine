@@ -8,22 +8,8 @@ import os
 import re
 import time
 
-# YENİ EKLENEN KISIM ----------
-from dotenv import load_dotenv
-
-# .env dosyasındaki şifreleri programa yükler
-load_dotenv('default_pass.env')
-
-# Şifreyi kodun içine yazmak yerine .env dosyasından çeker
-API_KEY = os.getenv("GEMINI_API_KEY")
-
-if not API_KEY:
-    raise ValueError("❌ API Anahtarı bulunamadı! Lütfen .env dosyanızı kontrol edin.")
-
-client = genai.Client(api_key=API_KEY)
-# ------------------------------
-client = genai.Client(api_key=API_KEY)
-
+# Küresel değişkenler (Başlangıçta boş bırakıyoruz, arayüzden gelecek)
+client = None
 VERI_AKTARICI_CALISIYOR = True
 
 def veri_aktariciyi_durdur():
@@ -288,9 +274,16 @@ def excel_olustur(ai_verisi, islenen_url, excel_dosyasi, ham_gorsel_linkleri):
         print(f"✅ YENİ OLUŞTURULDU -> '{excel_dosyasi}' (Toplam Satır: {len(excel_satirlari)})")
 
 
-async def baslat(txt_dosyasi, excel_dosyasi):
-    global VERI_AKTARICI_CALISIYOR
+async def baslat(txt_dosyasi, excel_dosyasi, gemini_api_key):
+    global VERI_AKTARICI_CALISIYOR, client
     VERI_AKTARICI_CALISIYOR = True
+
+    # Kullanıcının arayüzden girdiği API ile Yapay Zeka oturumunu başlatıyoruz
+    try:
+        client = genai.Client(api_key=gemini_api_key)
+    except Exception as e:
+        print(f"❌ API Hatası: Lütfen geçerli bir Gemini API Anahtarı girin! Detay: {e}")
+        return
 
     if not os.path.exists(txt_dosyasi):
         print(f"❌ HATA: {txt_dosyasi} bulunamadı!")
