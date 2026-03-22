@@ -1,0 +1,19 @@
+# Private files
+exeOutput.txt
+*.xlsx
+*.csv
+
+# Passwords
+default_pass.env
+
+# Python Cache
+__pycache__/
+*.pyc
+.idea/
+
+# Folders which are ignored
+venv/
+env/
+build/
+dist/
+minimal_bot/
